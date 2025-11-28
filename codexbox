@@ -3,19 +3,68 @@ set -euo pipefail
 
 REPO="${1:-$PWD}"
 CONTAINER_NAME="codexbox-${RANDOM}"
+MODE="${AI_SANDBOX_MODE:-auto}"
 
-podman run --rm -it \
-  --name "$CONTAINER_NAME" \
-  --userns=keep-id \
-  --cap-drop=ALL \
-  --cap-add=NET_ADMIN \
-  --device=/dev/net/tun \
-  --security-opt=no-new-privileges \
-  --network=slirp4netns \
-  -v "$REPO:/workspace:rw" \
-  -e HOME=/tmp \
-  -v "$HOME/.codex:/tmp/.codex:rw" \
-  -v "$HOME/.config/gh:/tmp/.config/gh:ro" \
-  -w /workspace \
-  ai-sandbox:latest \
-  -c "codex --dangerously-bypass-approvals-and-sandbox"
+HOST_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}"
+
+run_podman() {
+  podman run --rm -it \
+    --name "$CONTAINER_NAME" \
+    --userns=keep-id \
+    --cap-drop=ALL \
+    --cap-add=NET_ADMIN \
+    --device=/dev/net/tun \
+    --security-opt=no-new-privileges \
+    --network=slirp4netns \
+    -v "$REPO:/workspace:rw" \
+    -e HOME=/tmp \
+    -v "$HOME/.codex:/tmp/.codex:rw" \
+    -v "$HOME/.config/gh:/tmp/.config/gh:ro" \
+    -w /workspace \
+    ai-sandbox:latest \
+    -c "codex --dangerously-bypass-approvals-and-sandbox"
+}
+
+copy_if_dir() {
+  local src=$1 dst=$2
+  if [[ -d "$src" ]]; then
+    mkdir -p "$(dirname "$dst")"
+    cp -a "$src" "$dst"
+  fi
+}
+
+run_host() {
+  local sandbox_home
+  sandbox_home=$(mktemp -d "${TMPDIR:-/tmp}/codexbox-XXXXXX")
+  cleanup() { rm -rf "$sandbox_home"; }
+  trap cleanup EXIT INT TERM
+
+  copy_if_dir "$HOME/.codex" "$sandbox_home/.codex"
+  copy_if_dir "$HOST_CONFIG_DIR/gh" "$sandbox_home/.config/gh"
+
+  export HOME="$sandbox_home"
+  export XDG_CONFIG_HOME="$sandbox_home/.config"
+  export XDG_CACHE_HOME="$sandbox_home/.cache"
+  export XDG_DATA_HOME="$sandbox_home/.local/share"
+
+  local cmd
+  if command -v codex >/dev/null 2>&1; then
+    cmd=(codex)
+  else
+    cmd=(npx --yes @openai/codex@latest)
+  fi
+
+  cd "$REPO"
+  "${cmd[@]}" --dangerously-bypass-approvals-and-sandbox
+}
+
+if [[ "$MODE" != "host" && -x "$(command -v podman || true)" ]]; then
+  if run_podman; then
+    exit 0
+  fi
+  echo "podman failed; falling back to host mode (set AI_SANDBOX_MODE=host to skip podman)" >&2
+elif [[ "$MODE" != "host" ]]; then
+  echo "podman not available; using host mode" >&2
+fi
+
+run_host

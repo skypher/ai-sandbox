@@ -10,3 +10,4 @@ node_modules/
 # Tool config directories (contain auth tokens)
 .codex/
 .gemini/
+ssh/
