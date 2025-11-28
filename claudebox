@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO="${1:-$PWD}"
+CONTAINER_NAME="claudebox-${RANDOM}"
+
+MCP_CONFIG='{"mcpServers":{"shopify-dev-mcp":{"command":"/usr/local/bin/shopify-dev-mcp","args":[]}}}'
+
+podman run --rm -it \
+  --name "$CONTAINER_NAME" \
+  --userns=keep-id \
+  --cap-drop=ALL \
+  --security-opt=no-new-privileges \
+  --network=slirp4netns \
+  -v "$REPO:/workspace:rw" \
+  -e HOME=/tmp \
+  -v "$HOME/.claude:/tmp/.claude:rw" \
+  -v "$HOME/.config/gh:/tmp/.config/gh:ro" \
+  -w /workspace \
+  ai-sandbox:latest \
+  -c "claude --dangerously-skip-permissions --mcp-config '$MCP_CONFIG'"

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO="${1:-$PWD}"
+CONTAINER_NAME="codexbox-${RANDOM}"
+
+podman run --rm -it \
+  --name "$CONTAINER_NAME" \
+  --userns=keep-id \
+  --cap-drop=ALL \
+  --security-opt=no-new-privileges \
+  --network=slirp4netns \
+  -v "$REPO:/workspace:rw" \
+  -e HOME=/tmp \
+  -v "$HOME/.codex:/tmp/.codex:rw" \
+  -v "$HOME/.config/gh:/tmp/.config/gh:ro" \
+  -w /workspace \
+  ai-sandbox:latest \
+  -c "codex --dangerously-bypass-approvals-and-sandbox"

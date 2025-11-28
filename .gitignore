@@ -1,0 +1,12 @@
+# Temp files
+.tmp/
+
+# Node modules (if any get installed locally)
+node_modules/
+
+# NPM cache
+.npmcache/
+
+# Tool config directories (contain auth tokens)
+.codex/
+.gemini/

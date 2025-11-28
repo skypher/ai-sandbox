@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO="${1:-$PWD}"
+CONTAINER_NAME="geminibox-${RANDOM}"
+
+podman run --rm -it \
+  --name "$CONTAINER_NAME" \
+  --userns=keep-id \
+  --cap-drop=ALL \
+  --security-opt=no-new-privileges \
+  --network=slirp4netns \
+  -v "$REPO:/workspace:rw" \
+  -e HOME=/tmp \
+  -v "$HOME/.gemini:/tmp/.gemini:rw" \
+  -v "$HOME/.config/gh:/tmp/.config/gh:ro" \
+  -w /workspace \
+  ai-sandbox:latest \
+  -c "gemini mcp add shopify-dev-mcp /usr/local/bin/shopify-dev-mcp 2>/dev/null; gemini --sandbox=false"
