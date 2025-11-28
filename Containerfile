@@ -3,7 +3,7 @@ FROM archlinux:base-devel
 # Core tools
 RUN pacman -Syu --noconfirm \
     git curl ca-certificates nodejs npm python python-pip ripgrep less \
-    github-cli traceroute iputils bind podman \
+    github-cli traceroute iputils bind podman zerotier-one \
  && pacman -Scc --noconfirm
 
 # Put npm global bins in /usr/local/bin (keeps /usr/bin tidy)

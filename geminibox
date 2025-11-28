@@ -8,6 +8,8 @@ podman run --rm -it \
   --name "$CONTAINER_NAME" \
   --userns=keep-id \
   --cap-drop=ALL \
+  --cap-add=NET_ADMIN \
+  --device=/dev/net/tun \
   --security-opt=no-new-privileges \
   --network=slirp4netns \
   -v "$REPO:/workspace:rw" \
